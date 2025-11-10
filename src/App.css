@@ -23,6 +23,13 @@ body {
   margin-bottom: 40px;
 }
 
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
 .images-section {
   flex: 1;
   max-height: 800px;
@@ -79,7 +86,6 @@ body {
 }
 
 .reset-btn {
-  margin-bottom: 20px;
   padding: 10px 20px;
   background-color: #007bff;
   color: white;
@@ -90,5 +96,30 @@ body {
 }
 
 .reset-btn:hover {
+  background-color: #0056b3;
+}
+
+.tabs {
+  display: flex;
+}
+
+.tabs button {
+  padding: 10px 20px;
+  border: none;
+  background-color: #f0f0f0;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.tabs button.active {
+  background-color: #007bff;
+  color: white;
+}
+
+.tabs button:hover {
+  background-color: #ddd;
+}
+
+.tabs button.active:hover {
   background-color: #0056b3;
 }

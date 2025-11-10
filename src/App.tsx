@@ -32,18 +32,19 @@ interface SkinToneData {
 }
 
 interface ChartProps {
-  hues: number[]
+  values: number[]
   title: string
   label: string
   colorSpace: 'hsl' | 'lch'
-  onBarClick: (hueBin: number, colorSpace: 'hsl' | 'lch') => void
+  metric: 'hue' | 'saturation' | 'chroma'
+  xTitle: string
+  onBarClick: (bin: number, metric: 'hue' | 'saturation' | 'chroma', colorSpace: 'hsl' | 'lch') => void
 }
 
-function Chart({ hues, title, label, colorSpace, onBarClick }: ChartProps) {
-  // Create bins (every 1 degree)
+function Chart({ values, title, label, colorSpace, metric, xTitle, onBarClick }: ChartProps) {
   const bins: { [key: number]: number } = {}
-  hues.forEach(hue => {
-    const bin = Math.floor(hue)
+  values.forEach(value => {
+    const bin = Math.floor(value)
     bins[bin] = (bins[bin] || 0) + 1
   })
 
@@ -51,7 +52,7 @@ function Chart({ hues, title, label, colorSpace, onBarClick }: ChartProps) {
   const data = labels.map(label => bins[parseInt(label)])
 
   const chartData = {
-    labels: labels.map(l => `${l}°`),
+    labels: labels.map(l => `${l}${metric === 'hue' ? '°' : metric === 'saturation' ? '%' : ''}`),
     datasets: [{
       label: label,
       data: data,
@@ -66,8 +67,8 @@ function Chart({ hues, title, label, colorSpace, onBarClick }: ChartProps) {
     onClick: (_event: any, elements: any[]) => {
       if (elements.length > 0) {
         const index = elements[0].index
-        const hueBin = parseInt(labels[index])
-        onBarClick(hueBin, colorSpace)
+        const bin = parseInt(labels[index])
+        onBarClick(bin, metric, colorSpace)
       }
     },
     scales: {
@@ -81,7 +82,7 @@ function Chart({ hues, title, label, colorSpace, onBarClick }: ChartProps) {
       x: {
         title: {
           display: true,
-          text: 'Tom (°)'
+          text: xTitle
         }
       }
     },
@@ -130,6 +131,7 @@ function App() {
   const [allData, setAllData] = useState<SkinToneData[]>([])
   const [filteredData, setFilteredData] = useState<SkinToneData[]>([])
   const [filterText, setFilterText] = useState('')
+  const [activeTab, setActiveTab] = useState<'temperatura' | 'intensidade'>('temperatura')
 
   useEffect(() => {
     fetch('/processed.json')
@@ -141,16 +143,23 @@ function App() {
       .catch(error => console.error('Error loading data:', error))
   }, [])
 
-  const handleBarClick = (hueBin: number, colorSpace: 'hsl' | 'lch') => {
+  const handleBarClick = (bin: number, metric: 'hue' | 'saturation' | 'chroma', colorSpace: 'hsl' | 'lch') => {
     const filtered = allData.filter(item => {
-      const hue = colorSpace === 'hsl'
-        ? item.input.colors.skin_hsl[0] * 360
-        : item.input.colors.skin_lch[2]
-      return Math.floor(hue) === hueBin
-    })
-    setFilteredData(filtered)
-    setFilterText(`Filtrado por tom ${hueBin}° (${colorSpace.toUpperCase()})`)
-  }
+      let value: number;
+      if (metric === 'hue') {
+        value = colorSpace === 'hsl' ? item.input.colors.skin_hsl[0] * 360 : item.input.colors.skin_lch[2];
+      } else if (metric === 'saturation') {
+        value = item.input.colors.skin_hsl[1] * 100;
+      } else { // chroma
+        value = item.input.colors.skin_lch[1];
+      }
+      return Math.floor(value) === bin;
+    });
+    setFilteredData(filtered);
+    const metricName = metric === 'hue' ? 'tom' : metric === 'saturation' ? 'saturação' : 'croma';
+    const unit = metric === 'hue' ? '°' : metric === 'saturation' ? '%' : '';
+    setFilterText(`Filtrado por ${metricName} ${bin}${unit} (${colorSpace.toUpperCase()})`);
+  };
 
   const resetFilter = () => {
     setFilteredData(allData)
@@ -159,31 +168,69 @@ function App() {
 
   const hslHues = filteredData.map(item => item.input.colors.skin_hsl[0] * 360)
   const lchHues = filteredData.map(item => item.input.colors.skin_lch[2])
+  const hslSaturations = filteredData.map(item => item.input.colors.skin_hsl[1] * 100)
+  const lchChromas = filteredData.map(item => item.input.colors.skin_lch[1])
 
   return (
     <div className="container">
       <h1>Visualizador de Cores de Imagens{filterText && ` - ${filterText}`}</h1>
-      {filterText && (
-        <button className="reset-btn" onClick={resetFilter}>
-          Mostrar Todas as Imagens
-        </button>
-      )}
+      <div className="controls">
+        <div className="tabs">
+          <button onClick={() => { setActiveTab('temperatura'); resetFilter(); }} className={activeTab === 'temperatura' ? 'active' : ''}>Temperatura</button>
+          <button onClick={() => { setActiveTab('intensidade'); resetFilter(); }} className={activeTab === 'intensidade' ? 'active' : ''}>Intensidade</button>
+        </div>
+        {filterText && (
+          <button className="reset-btn" onClick={resetFilter}>
+            Mostrar Todas as Imagens
+          </button>
+        )}
+      </div>
       <div className="main-layout">
         <div className="charts-section">
-          <Chart
-            hues={hslHues}
-            title="Distribuição de Tons HSL"
-            label="Quantidade"
-            colorSpace="hsl"
-            onBarClick={handleBarClick}
-          />
-          <Chart
-            hues={lchHues}
-            title="Distribuição de Tons LCH"
-            label="Quantidade"
-            colorSpace="lch"
-            onBarClick={handleBarClick}
-          />
+          {activeTab === 'temperatura' && (
+            <>
+              <Chart
+                values={hslHues}
+                title="Distribuição de Tons HSL"
+                label="Quantidade"
+                colorSpace="hsl"
+                metric="hue"
+                xTitle="Tom (°)"
+                onBarClick={handleBarClick}
+              />
+              <Chart
+                values={lchHues}
+                title="Distribuição de Tons LCH"
+                label="Quantidade"
+                colorSpace="lch"
+                metric="hue"
+                xTitle="Tom (°)"
+                onBarClick={handleBarClick}
+              />
+            </>
+          )}
+          {activeTab === 'intensidade' && (
+            <>
+              <Chart
+                values={hslSaturations}
+                title="Distribuição de Saturação HSL"
+                label="Quantidade"
+                colorSpace="hsl"
+                metric="saturation"
+                xTitle="Saturação (%)"
+                onBarClick={handleBarClick}
+              />
+              <Chart
+                values={lchChromas}
+                title="Distribuição de Croma LCH"
+                label="Quantidade"
+                colorSpace="lch"
+                metric="chroma"
+                xTitle="Croma"
+                onBarClick={handleBarClick}
+              />
+            </>
+          )}
         </div>
         <div className="images-section">
           {filteredData.map((item, index) => (
