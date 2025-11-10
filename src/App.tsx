@@ -44,7 +44,7 @@ interface ChartProps {
 function Chart({ values, title, label, colorSpace, metric, xTitle, onBarClick }: ChartProps) {
   const bins: { [key: number]: number } = {}
   values.forEach(value => {
-    const bin = Math.floor(value)
+    const bin = Math.round(value)
     bins[bin] = (bins[bin] || 0) + 1
   })
 
@@ -52,7 +52,7 @@ function Chart({ values, title, label, colorSpace, metric, xTitle, onBarClick }:
   const data = labels.map(label => bins[parseInt(label)])
 
   const chartData = {
-    labels: labels.map(l => `${l}${metric === 'hue' ? '°' : metric === 'saturation' ? '%' : ''}`),
+    labels: labels.map(l => `${l}${metric === 'hue' ? '°' : ''}`),
     datasets: [{
       label: label,
       data: data,
@@ -103,13 +103,14 @@ function Chart({ values, title, label, colorSpace, metric, xTitle, onBarClick }:
 
 interface ImageItemProps {
   data: SkinToneData
+  activeTab: 'temperatura' | 'intensidade'
 }
 
-function ImageItem({ data }: ImageItemProps) {
+function ImageItem({ data, activeTab }: ImageItemProps) {
   const { filename, colors } = data.input
   const { skin, skin_hsl, skin_lch } = colors
 
-  const tooltip = `Hex: ${skin}\nHSL: ${Math.round(skin_hsl[0] * 360)}°\nLCH: ${Math.round(skin_lch[2])}°`
+  const tooltip = `Hex: ${skin}\nHSL: ${(skin_hsl[0] * 360).toFixed(2)}°\nLCH: ${skin_lch[2].toFixed(2)}°`
 
   return (
     <div className="item" title={tooltip}>
@@ -118,10 +119,16 @@ function ImageItem({ data }: ImageItemProps) {
         <div className="image-container">
           <img src={`/files/${filename}`} alt={filename} />
         </div>
-        <div
-          className="color-swatch"
-          style={{ backgroundColor: skin }}
-        />
+        <div className="color-section">
+          <div
+            className="color-swatch"
+            style={{ backgroundColor: skin }}
+          />
+          <div className="color-values">
+            <div>HSL: {activeTab === 'temperatura' ? (skin_hsl[0] * 360).toFixed(2) + '°' : (skin_hsl[1] * 100).toFixed(2)}</div>
+            <div>LCH: {activeTab === 'temperatura' ? skin_lch[2].toFixed(2) + '°' : skin_lch[1].toFixed(2)}</div>
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -153,11 +160,11 @@ function App() {
       } else { // chroma
         value = item.input.colors.skin_lch[1];
       }
-      return Math.floor(value) === bin;
+      return Math.round(value) === bin;
     });
     setFilteredData(filtered);
     const metricName = metric === 'hue' ? 'tom' : metric === 'saturation' ? 'saturação' : 'croma';
-    const unit = metric === 'hue' ? '°' : metric === 'saturation' ? '%' : '';
+    const unit = metric === 'hue' ? '°' : '';
     setFilterText(`Filtrado por ${metricName} ${bin}${unit} (${colorSpace.toUpperCase()})`);
   };
 
@@ -217,7 +224,7 @@ function App() {
                 label="Quantidade"
                 colorSpace="hsl"
                 metric="saturation"
-                xTitle="Saturação (%)"
+                xTitle="Saturação"
                 onBarClick={handleBarClick}
               />
               <Chart
@@ -234,7 +241,7 @@ function App() {
         </div>
         <div className="images-section">
           {filteredData.map((item, index) => (
-            <ImageItem key={index} data={item} />
+            <ImageItem key={index} data={item} activeTab={activeTab} />
           ))}
         </div>
       </div>
