@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
-import { Bar } from 'react-chartjs-2'
+import { Bar, Scatter } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   BarElement,
+  PointElement,
   Title,
   Tooltip,
   Legend,
@@ -15,6 +16,7 @@ ChartJS.register(
   CategoryScale,
   LinearScale,
   BarElement,
+  PointElement,
   Title,
   Tooltip,
   Legend
@@ -101,6 +103,62 @@ function Chart({ values, title, label, colorSpace, metric, xTitle, onBarClick }:
   )
 }
 
+interface ScatterChartProps {
+  points: { x: number; y: number }[]
+  title: string
+  xTitle: string
+  yTitle: string
+  onPointClick: (index: number) => void
+}
+
+function ScatterChart({ points, title, xTitle, yTitle, onPointClick }: ScatterChartProps) {
+  const chartData = {
+    datasets: [{
+      label: 'Pontos',
+      data: points,
+      backgroundColor: 'rgba(255, 99, 132, 0.5)',
+      borderColor: 'rgba(255, 99, 132, 1)',
+      borderWidth: 1
+    }]
+  }
+
+  const options = {
+    responsive: true,
+    onClick: (_event: any, elements: any[]) => {
+      if (elements.length > 0) {
+        const index = elements[0].index
+        onPointClick(index)
+      }
+    },
+    scales: {
+      x: {
+        title: {
+          display: true,
+          text: xTitle
+        }
+      },
+      y: {
+        title: {
+          display: true,
+          text: yTitle
+        }
+      }
+    },
+    plugins: {
+      title: {
+        display: true,
+        text: title
+      }
+    }
+  }
+
+  return (
+    <div className="chart-wrapper">
+      <Scatter data={chartData} options={options} />
+    </div>
+  )
+}
+
 interface ImageItemProps {
   data: SkinToneData
   activeTab: 'temperatura' | 'intensidade'
@@ -168,6 +226,12 @@ function App() {
     setFilterText(`Filtrado por ${metricName} ${bin}${unit} (${colorSpace.toUpperCase()})`);
   };
 
+  const handlePointClick = (index: number) => {
+    const item = filteredData[index];
+    setFilteredData([item]);
+    setFilterText(`Filtrado por ponto: ${item.input.filename}`);
+  };
+
   const resetFilter = () => {
     setFilteredData(allData)
     setFilterText('')
@@ -177,6 +241,9 @@ function App() {
   const lchHues = filteredData.map(item => item.input.colors.skin_lch[2])
   const hslSaturations = filteredData.map(item => item.input.colors.skin_hsl[1] * 100)
   const lchChromas = filteredData.map(item => item.input.colors.skin_lch[1])
+
+  const scatterPoints = hslSaturations.map((sat, i) => ({ x: sat, y: lchChromas[i] }))
+  const hueScatterPoints = hslHues.map((h, i) => ({ x: h, y: lchHues[i] }))
 
   return (
     <div className="container">
@@ -214,6 +281,13 @@ function App() {
                 xTitle="Tom (°)"
                 onBarClick={handleBarClick}
               />
+              <ScatterChart
+                points={hueScatterPoints}
+                title="Correlação entre Tom HSL e Tom LCH"
+                xTitle="Tom HSL (°)"
+                yTitle="Tom LCH (°)"
+                onPointClick={handlePointClick}
+              />
             </>
           )}
           {activeTab === 'intensidade' && (
@@ -235,6 +309,13 @@ function App() {
                 metric="chroma"
                 xTitle="Croma"
                 onBarClick={handleBarClick}
+              />
+              <ScatterChart
+                points={scatterPoints}
+                title="Correlação entre Saturação e Croma"
+                xTitle="Saturação"
+                yTitle="Croma"
+                onPointClick={handlePointClick}
               />
             </>
           )}
