@@ -33,7 +33,9 @@ export function TabContent({
       skin: 'Pele',
       mouth: 'Boca',
       hair: 'Cabelo',
-      iris: 'Íris'
+      iris: 'Íris',
+      mouth_contour: 'Contorno da Boca',
+      under_eye_skin: 'Cavidade Ocular'
     }[activeFeature]
     
     return (
@@ -76,7 +78,9 @@ export function TabContent({
       skin: 'Pele',
       mouth: 'Boca',
       hair: 'Cabelo',
-      iris: 'Íris'
+      iris: 'Íris',
+      mouth_contour: 'Contorno da Boca',
+      under_eye_skin: 'Cavidade Ocular'
     }[activeFeature]
     
     return (
@@ -119,7 +123,9 @@ export function TabContent({
     skin: 'Pele',
     mouth: 'Boca',
     hair: 'Cabelo',
-    iris: 'Íris'
+    iris: 'Íris',
+    mouth_contour: 'Contorno da Boca',
+    under_eye_skin: 'Cavidade Ocular'
   }[activeFeature]
   
   return (
